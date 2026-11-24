@@ -1,0 +1,179 @@
+{
+  "pilot_only": true,
+  "split_unit": "source image; physical board IDs unavailable",
+  "device": "cpu",
+  "target_classes": [
+    "good",
+    "solder_bridge",
+    "insufficient_solder"
+  ],
+  "datasets": [
+    {
+      "name": "soldef",
+      "annotations": [
+        "data/external/soldef/_annotations.coco.json"
+      ],
+      "source_version": "Kaggle v1",
+      "license": "GPL-3.0 (Kaggle API metadata)",
+      "license_confirmed": true,
+      "source_url": "https://www.kaggle.com/datasets/mauriziocalabrese/soldef-ai-pcb-dataset-for-defect-detection",
+      "class_map": {
+        "good": "good",
+        "exc_solder": "good",
+        "poor_solder": "insufficient_solder",
+        "no_good": "solder_bridge",
+        "spike": "solder_bridge"
+      }
+    }
+  ],
+  "class_maps": {
+    "soldef": {
+      "good": "good",
+      "exc_solder": "good",
+      "poor_solder": "insufficient_solder",
+      "no_good": "solder_bridge",
+      "spike": "solder_bridge"
+    }
+  },
+  "crop_counts": {
+    "solder_bridge": 246,
+    "good": 368,
+    "insufficient_solder": 57
+  },
+  "source_image_groups_by_class": {
+    "good": 289,
+    "solder_bridge": 230,
+    "insufficient_solder": 51
+  },
+  "split_sizes": {
+    "train": 414,
+    "val": 133,
+    "test": 124
+  },
+  "seed": 42,
+  "epochs": 10,
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 1.0095381866330686,
+      "train_accuracy": 0.5434782608695652,
+      "val_loss": 1.0063837865241487,
+      "val_accuracy": 0.5413533834586466
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.7755138542917039,
+      "train_accuracy": 0.642512077294686,
+      "val_loss": 0.920826278234783,
+      "val_accuracy": 0.5338345864661654
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.5573621588052758,
+      "train_accuracy": 0.7584541062801933,
+      "val_loss": 0.8283206712930722,
+      "val_accuracy": 0.6541353383458647
+    },
+    {
+      "epoch": 4,
+      "train_loss": 0.42736278092803587,
+      "train_accuracy": 0.8285024154589372,
+      "val_loss": 0.7719473699878033,
+      "val_accuracy": 0.6842105263157895
+    },
+    {
+      "epoch": 5,
+      "train_loss": 0.37118156160709365,
+      "train_accuracy": 0.8405797101449275,
+      "val_loss": 0.760500986549191,
+      "val_accuracy": 0.7293233082706767
+    },
+    {
+      "epoch": 6,
+      "train_loss": 0.2820619235292149,
+      "train_accuracy": 0.8961352657004831,
+      "val_loss": 0.7508194740105393,
+      "val_accuracy": 0.7218045112781954
+    },
+    {
+      "epoch": 7,
+      "train_loss": 0.22572613813450948,
+      "train_accuracy": 0.8961352657004831,
+      "val_loss": 0.823647186496204,
+      "val_accuracy": 0.7593984962406015
+    },
+    {
+      "epoch": 8,
+      "train_loss": 0.21403192206857286,
+      "train_accuracy": 0.9106280193236715,
+      "val_loss": 0.8540923425129482,
+      "val_accuracy": 0.7669172932330827
+    },
+    {
+      "epoch": 9,
+      "train_loss": 0.15145973717244926,
+      "train_accuracy": 0.927536231884058,
+      "val_loss": 0.6367286473960805,
+      "val_accuracy": 0.7669172932330827
+    },
+    {
+      "epoch": 10,
+      "train_loss": 0.13734942552260154,
+      "train_accuracy": 0.9347826086956522,
+      "val_loss": 0.8876983469590208,
+      "val_accuracy": 0.7819548872180451
+    }
+  ],
+  "test_loss": 0.7863132155710651,
+  "test_accuracy": 0.7903225806451613,
+  "classification_report": {
+    "good": {
+      "precision": 0.75,
+      "recall": 0.864406779661017,
+      "f1-score": 0.8031496062992126,
+      "support": 59.0
+    },
+    "solder_bridge": {
+      "precision": 0.8297872340425532,
+      "recall": 0.75,
+      "f1-score": 0.7878787878787878,
+      "support": 52.0
+    },
+    "insufficient_solder": {
+      "precision": 0.8888888888888888,
+      "recall": 0.6153846153846154,
+      "f1-score": 0.7272727272727273,
+      "support": 13.0
+    },
+    "accuracy": 0.7903225806451613,
+    "macro avg": {
+      "precision": 0.8228920409771474,
+      "recall": 0.7432637983485441,
+      "f1-score": 0.7727670404835759,
+      "support": 124.0
+    },
+    "weighted avg": {
+      "precision": 0.7980200945626478,
+      "recall": 0.7903225806451613,
+      "f1-score": 0.7887908806120643,
+      "support": 124.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      51,
+      7,
+      1
+    ],
+    [
+      13,
+      39,
+      0
+    ],
+    [
+      4,
+      1,
+      8
+    ]
+  ]
+}

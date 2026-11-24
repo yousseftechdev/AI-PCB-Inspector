@@ -16,10 +16,10 @@ Pathway A (Industrial Base: product quality inspection and control).
 |---|---|
 | Repository structure | ✅ scaffolded |
 | Architecture decision (which AI pipeline) | 🟡 proposed in [`docs/approaches.md`](docs/approaches.md) — **awaiting team decision** |
-| Dataset strategy | 🟡 researched in [`docs/datasets.md`](docs/datasets.md) — **no suitable public dataset; hybrid plan proposed** |
+| Dataset strategy | 🟡 researched in [`docs/datasets.md`](docs/datasets.md) — **public-data pilot executed 2026-11-24** |
 | Hardware rig | ⬜ not built |
-| Our dataset | ⬜ not captured |
-| Trained model | ⬜ not trained |
+| Our dataset | 🟡 public-data pilot captured in `data/external/`; our physical captures still pending |
+| Trained model | 🟢 public-data pilot model in [`training/runs/option_b_public_pilot/run_20261124_224758/`](training/runs/option_b_public_pilot/run_20261124_224758/option_b_mobilenetv3_small.pt) (CPU pilot, public data only — not the project accuracy claim) |
 | Pipeline / cloud / UI code | ⬜ not written |
 
 ---
@@ -70,11 +70,13 @@ agent.md        the project brief (git-ignored by choice — keep it local)
 
 ---
 
-## Nothing here is measured yet
+## Nothing here is measured yet (except the public-data pilot)
 
-No accuracy or latency figure in this repository is a measurement. Every number marked *benchmark*
-or TBC must be produced on our own hardware and logged in `docs/` before it appears in the
-portfolio, poster or logbook.
+No accuracy or latency figure in this repository is a measurement of *our* hardware or boards.
+Every number marked *benchmark* or TBC must be produced on our own hardware and logged in
+`docs/` before it appears in the portfolio, poster or logbook. The only committed result is the
+public-data Option B pilot (`training/runs/option_b_public_pilot/run_20261124_224758/`); its
+`test_accuracy` is a feasibility number on public images, never the ≥80% project claim.
 
 ---
 

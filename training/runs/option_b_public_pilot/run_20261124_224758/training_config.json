@@ -1,0 +1,27 @@
+{
+  "target_classes": [
+    "good",
+    "solder_bridge",
+    "insufficient_solder"
+  ],
+  "datasets": [
+    {
+      "name": "soldef",
+      "root": "data/external/soldef",
+      "annotations": [
+        "data/external/soldef/_annotations.coco.json"
+      ],
+      "class_map": {
+        "good": "good",
+        "exc_solder": "good",
+        "poor_solder": "insufficient_solder",
+        "no_good": "solder_bridge",
+        "spike": "solder_bridge"
+      },
+      "source_version": "Kaggle v1",
+      "license": "GPL-3.0 (Kaggle API metadata)",
+      "license_confirmed": true,
+      "source_url": "https://www.kaggle.com/datasets/mauriziocalabrese/soldef-ai-pcb-dataset-for-defect-detection"
+    }
+  ]
+}

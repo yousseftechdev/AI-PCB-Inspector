@@ -1,8 +1,7 @@
 # Public PCB / solder-defect datasets — survey and verdict
 
-Status: **Colab pilot configured; execution and label audit pending** · Updated 2026-11-24
-Purpose: find out whether we can train the inspector on existing public images instead of
-building our own dataset.
+Status: **Colab pilot executed 2026-11-24; artifacts in `data/external/`** · Purpose: find out
+whether we can train the inspector on existing public images instead of building our own dataset.
 
 **Short answer: no public set replaces project-specific captures or the final evaluation.** There
 are useful pilot/pretraining sources, but their optics, board populations, and labels do not match
@@ -161,11 +160,27 @@ replace physically defective examples in validation/test or substantiate real-wo
   cannot support a board-generalization test or final accuracy claim. Do not risk sensors or
   microcontrollers as defect samples.
 - Target by Sunday 2026-11-29: complete the Colab download/audit workflow and produce a reproducible
-  Option B baseline if the audited public labels support all three classes. This is a data/model
-  milestone, not a claim that the full hardware/cloud project is 50% complete.
-- Before training: add Kaggle username/key and Roboflow API key to Colab Secrets (not chat, notebook,
+  public-data Option B baseline if the audited public labels support all three classes.
+  **Status 2026-11-24: done** — the download/audit workflow and the public-data pilot ran to
+  completion on Colab (see the executed block below).
+### Colab pilot executed 2026-11-24
+
+The Colab notebook `training/notebooks/option_b_colab.ipynb` + companion
+`training/notebooks/option_b_colab.py` ran to completion in hosted Colab (Free tier, CPU). The
+audited artifacts are committed in the repo:
+
+- Datasets: `data/external/soldef/` (Kaggle SolDef_AI `_annotations.coco.json`, 428 images, 671
+  annotations) and `data/external/audit_summary.json` with `data/external/audit_previews/`.
+  No Roboflow data was available this run.
+- Run: `training/runs/option_b_public_pilot/run_20261124_224758/` — `option_b_mobilenetv3_small.pt`,
+  `metrics.json`, `split_manifest.csv`, `training_config.json`, `crops/`. Pilot `test_accuracy`
+  0.7903 (CPU, 10 epochs); see `metrics.json` for per-class precision/recall and the confusion
+  matrix.
+
+Reproducing requires Kaggle username/key and Roboflow API key in Colab Secrets (not chat, notebook,
   source code or repository); visually audit labels and fill the explicit class mapping in
-  `training/notebooks/option_b_colab.ipynb`.
+  `training/notebooks/option_b_colab.ipynb` — the defaults map nothing, and training stops unless
+  all three classes are supported by reviewed labels.
 - Public dataset splits do not prove physical-board independence. Report this pilot as public-data
   feasibility only, never as the final ≥80% project accuracy claim.
 

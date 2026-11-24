@@ -8,9 +8,13 @@ Last updated: 2026-11-24. Items marked **TBC** are unknown and must be confirmed
 
 - **Repository state:** scaffold plus a Colab-only public dataset download/audit and Option B
   classifier pilot runner, now handling multiple split-specific COCO files and covered by local
-  COCO discovery/path tests. No public dataset has been downloaded, and no training has run yet.
-  There is no local camera capture, OpenCV ROI locator, deployment inference, hardware, cloud or UI
-  code.
+  COCO discovery/path tests. The Colab download/audit and the public-data Option B pilot **ran to
+  completion on Colab** (run `training/runs/option_b_public_pilot/run_20261124_224758`):
+  SolDef_AI `_annotations.coco.json` (428 images, 671 annotations) with the audited class map, the
+  15 audit preview images, crops and split manifest are now in the repo, and training produced
+  `option_b_mobilenetv3_small.pt` + `metrics.json` (public-data pilot only — see below). There is
+  still no local camera capture, OpenCV ROI locator, deployment inference, hardware, cloud or UI
+  code, and no physical-board dataset has been captured.
 - **Confirmed direction:** Option B first (`good`, `solder_bridge`, `insufficient_solder`), with an
   upgrade to Option C if measured ROI coverage requires a learned locator.
 - **Dataset:** no public data can support the final accuracy claim. Kaggle SolDef_AI is downloadable
@@ -30,9 +34,11 @@ Last updated: 2026-11-24. Items marked **TBC** are unknown and must be confirmed
   proof-of-process sample. Track joint IDs, capture controlled before/after images, and do not treat
   multiple joints/views from that one board as independent board-level evaluation. Seek spare/scrap
   boards through teammates, school, or repair shops; do not damage sensors/microcontrollers.
-- **Current milestone:** by Sunday 2026-11-29 complete the Colab download/audit and reproducible
-  public-data Option B baseline if audited labels support all three classes. This is a data/model
-  workstream milestone, not 50% completion of the complete system.
+- **Current milestone:** the Colab download/audit and the reproducible public-data Option B
+  baseline were completed on 2026-11-24 (artifacts in the repo; pilot test accuracy 0.7903 —
+  see `training/runs/option_b_public_pilot/run_20261124_224758/metrics.json`). The full
+  physical-board capture, Option B/C decision data, board-grouped test and final ≥80% accuracy
+  claim remain future milestones; this run is feasibility evidence only.
 - **Dataset/legal status:** Kaggle API metadata for official SolDef_AI reports GPL-3.0 and archive
   size ~1.18 GB. Roboflow is a second candidate; verify the licence/class definitions in the
   account before mapping. Never assume SolDef `exc_solder` means bridge. No credentials were

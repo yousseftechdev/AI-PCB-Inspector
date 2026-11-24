@@ -1,0 +1,24 @@
+{
+  "soldef": [
+    {
+      "annotation": "data/external/soldef/_annotations.coco.json",
+      "images": 428,
+      "annotations": 671,
+      "categories": {
+        "1": "no_good",
+        "2": "good",
+        "3": "poor_solder",
+        "4": "exc_solder",
+        "5": "spike"
+      },
+      "counts": {
+        "no_good": 116,
+        "good": 186,
+        "poor_solder": 57,
+        "exc_solder": 182,
+        "spike": 130
+      }
+    }
+  ],
+  "roboflow": []
+}

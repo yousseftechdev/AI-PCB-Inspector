@@ -1,6 +1,6 @@
 # Ways to build the PCB inspector
 
-Status: **Option B selected for pilot; Option C is the fallback** · 2026-11-24
+Status: **Option B selected for pilot (pilot executed 2026-11-24); Option C is the fallback** · 2026-11-24
 Owner: TBC · Mechanical presentation remains undecided
 
 This document lists the realistic ways to build the AI PCB Defect Inspector on the hardware we
@@ -233,7 +233,10 @@ unseen physical boards.
 
 1. Run `training/notebooks/option_b_colab.ipynb` in hosted Colab with credentials stored in Colab
    Secrets. Use Colab's provided PyTorch; the runner auto-selects an available GPU or CPU. Keep
-   source data and checkpoints in Colab/Drive, not on the project PC.
+   source data and checkpoints in Colab/Drive, not on the project PC. **Done 2026-11-24** —
+   artifacts are committed in the repo under `data/external/` and
+   `training/runs/option_b_public_pilot/run_20261124_224758/` (pilot CPU run, `test_accuracy`
+   0.7903 on public data only).
 2. Audit the exported COCO categories, annotations, and representative crops. Verify Roboflow
    licence and class definitions. Map only labels that genuinely correspond to `good`,
    `solder_bridge`, and `insufficient_solder`. If no public source has a defensible bridge label,
