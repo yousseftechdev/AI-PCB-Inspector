@@ -217,6 +217,32 @@ Never open a half-downloaded model "just to test quickly".
 - Secrets → Colab Secrets / local `.env` only; never in Drive handoff files, repo, or chat.
 - Ambiguous request → ask one short question rather than guessing (per `agent.md` §11).
 
+### 6.7 Known sync incident — 2026-11-25 (read this first on the local PC)
+
+The local agent tried the filtered `git fetch` + merge shown in §6.4's sibling guide and **it failed at
+~70% because the connection dropped**. Do not retry `git pull`, `git fetch`, or a merge locally: the
+local PC cannot receive this repo's git history over the current link. The blocker is the 1.2 GB
+parent commit `720902f` (`data/external/soldef/`), not our small text changes.
+
+**Use the Drive text bundle instead** (`sync/repo/`, ~315 KB, with `MANIFEST.sha256`):
+
+```bash
+# on the local PC, bundle downloaded to a sibling folder (NOT inside the repo)
+cd ~/Downloads/repo_bundle && sha256sum -c MANIFEST.sha256
+cd /path/to/AI-PCB-Inspector
+git status                                   # must be clean; stash/commit local work first
+rsync -a --exclude='MANIFEST.sha256' ~/Downloads/repo_bundle/ ./
+git add -A && git commit -m "Sync text files from Colab bundle (2026-11-25)"
+git log --oneline -3
+```
+
+If the bundle folder was placed inside the repo root instead, add `repo_bundle/` to `.gitignore`
+before committing so it is never tracked.
+
+**Do not `git push` from the Colab repo.** This VM has no remote configured, and pushing `c413ae1`
+would also require transferring its 1.2 GB parent commit. Colab publishes to Drive only; the local
+agent makes the text-only commit locally. See `handoff/SYNC_INSTRUCTIONS.md` for the full note.
+
 ---
 
 ## 7. TBC — questions to resolve with the user / local agent
