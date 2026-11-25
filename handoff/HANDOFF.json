@@ -1,0 +1,38 @@
+{
+  "updated_at": "2026-11-25",
+  "author": "colab-agent",
+  "workflow": "Colab-only: development, training, export, handoff and git push all happen in Colab. The local machine/Pi only downloads exports/current and runs test_board.py.",
+  "latest_run": null,
+  "status": "awaiting_colab_run",
+  "architecture": {
+    "type": "full_board_hybrid",
+    "detector": "YOLO11n, one class: solder_joint",
+    "classifier": "MobileNetV3-Small on detector crops",
+    "input": "whole board image of arbitrary resolution",
+    "output": "PASS | FAIL | REVIEW with joint boxes"
+  },
+  "label_policy": {
+    "rulebook": "docs/LABELS.md",
+    "no_good": "other (component misplacement) - NEVER solder_bridge",
+    "bridge": "only from a visually reviewed STICKSOLDER/physical source; otherwise dropped from labels.txt"
+  },
+  "retired_runs": [
+    {
+      "run_id": "20261125_065711",
+      "path": "drive/MyDrive/AI-PCB-Inspector/option_b_public_pilot/run_20261125_065711",
+      "accuracy": 0.782258064516129,
+      "reason": "Trained on disputed label map (no_good -> solder_bridge); crop-only input. Not a project result."
+    }
+  ],
+  "known_issues": [
+    "No bundle published yet: add KAGGLE_USERNAME/KAGGLE_KEY (and optional ROBOFLOW_API_KEY, GH_TOKEN) to Colab Secrets and Run all in training/PCB_Inspector_Colab.ipynb.",
+    "No reviewed solder_bridge source yet, so the first bundle will not be able to predict solder_bridge.",
+    "Public-data results are feasibility only; >=80% still needs physically held-out boards from our rig.",
+    "Pi latency and temperature not measured."
+  ],
+  "next_action": "Run the Colab notebook, review label contact sheets, publish a bundle, then test locally with runtime/test_board.py on a whole board image.",
+  "sync_status": {
+    "deprecated": "The two-agent sync protocol, sync/repo text bundles and local ACK files are retired. GitHub is the source of truth for text; Google Drive carries binaries.",
+    "push": "Colab cell: python training/fullboard_colab.py push (uses GH_TOKEN from Colab Secrets; token is never printed)."
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "_comment": "Colab-only full-board pipeline. 'reviewed' must be true before a mapping is used with --strict-labels. Set it only after looking at audit/<source>/<class>_contact.jpg.",
+  "target_classes": [
+    "good",
+    "insufficient_solder",
+    "solder_bridge",
+    "other"
+  ],
+  "datasets": [
+    {
+      "name": "soldef",
+      "root": "/content/pcb_inspector_data/soldef",
+      "annotations_glob": "**/_annotations.coco.json",
+      "license": "GPL-3.0 (Kaggle API metadata)",
+      "license_confirmed": true,
+      "source_url": "https://www.kaggle.com/datasets/mauriziocalabrese/soldef-ai-pcb-dataset-for-defect-detection",
+      "class_map": {
+        "good": {"label": "good", "reviewed": true, "reason": "Explicit class name; confirmed by SolDef paper."},
+        "poor_solder": {"label": "insufficient_solder", "reviewed": false, "reason": "Plausible but must be checked against contact sheet."},
+        "exc_solder": {"label": "other", "reviewed": false, "reason": "Excess solder is NOT a bridge. Kept as 'other' to avoid false bridge calls."},
+        "no_good": {"label": "other", "reviewed": true, "reason": "docs/datasets.md: component misplacement, NOT a solder bridge."},
+        "spike": {"label": "other", "reviewed": false, "reason": "Solder spike is NOT automatically a bridge; review contact sheet."}
+      }
+    },
+    {
+      "name": "roboflow",
+      "root": "/content/pcb_inspector_data/roboflow",
+      "annotations_glob": "**/_annotations.coco.json",
+      "workspace": "work-6qkmv",
+      "project": "pcb-solder-joint",
+      "version": 1,
+      "license": "CC BY 4.0 (verify in the logged-in project before use)",
+      "license_confirmed": false,
+      "source_url": "https://universe.roboflow.com/work-6qkmv/pcb-solder-joint",
+      "class_map": {
+        "GOOD": {"label": "good", "reviewed": false, "reason": "Verify on contact sheet."},
+        "COLDSOLDER": {"label": "insufficient_solder", "reviewed": false, "reason": "Verify on contact sheet; cold solder != insufficient solder by default."},
+        "STICKSOLDER": {"label": "solder_bridge", "reviewed": false, "reason": "Only map to bridge after visual confirmation of actual pad-to-pad bridging."}
+      }
+    }
+  ],
+  "training": {
+    "seed": 42,
+    "val_fraction": 0.15,
+    "test_fraction": 0.15,
+    "classifier_epochs": 20,
+    "classifier_image_size": 128,
+    "classifier_batch_size": 64,
+    "classifier_learning_rate": 0.0003,
+    "detector_epochs": 30,
+    "detector_image_size": 640,
+    "detector_batch_size": 16,
+    "conf_threshold": 0.25,
+    "iou_threshold": 0.45,
+    "crop_expand": 0.2,
+    "max_detections": 200,
+    "int8": true
+  }
+}

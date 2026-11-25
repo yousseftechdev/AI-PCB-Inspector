@@ -1,0 +1,25 @@
+# Binaries and large data never enter git (Google Drive carries them).
+*.pt
+*.tflite
+*.onnx
+*.ncnn*
+*.npz
+*.zip
+*.tar.gz
+
+# Raw data, crops, caches and logs.
+data/external/
+data/raw/
+data/cache/
+crops/
+training/runs/
+training/work/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# Local secrets and OS noise.
+.env
+*.key
+Thumbs.db
+.DS_Store
