@@ -6,3 +6,4 @@
 - 2026-11-25 (colab-agent): local agent is on Windows; added PowerShell Get-FileHash / robocopy equivalents to handoff/SYNC_INSTRUCTIONS.md.
 
 - 2026-11-25: Workflow overhauled to Colab-only. Crop-only pilot retired; full-board detector+classifier pipeline, label rulebook, local test script and git push path added. No new run published yet.
+- 2026-11-25: Cleaned repository pushed to GitHub main (Colab device-code auth); remote history preserved with a shallow fetch + `-s ours` merge.
