@@ -41,10 +41,11 @@ def _interpreter_class():
         return Interpreter
     except ImportError:
         try:
-            from tensorflow.lite import Interpreter
+            import tensorflow.lite as tflite
 
-            return Interpreter
-        except ImportError as exc:  # pragma: no cover - depends on local env
+            # TF 2.21 exposes Interpreter lazily; a direct `from ... import` can fail.
+            return getattr(tflite, "Interpreter")
+        except (ImportError, AttributeError) as exc:  # pragma: no cover - depends on local env
             raise RuntimeError(
                 "No TFLite runtime found. Install 'tflite-runtime' on the Pi, "
                 "or 'tensorflow' on a PC (both expose tflite.Interpreter)."
@@ -334,7 +335,7 @@ class FullBoardInspector:
     def _detect(self, full_image: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         padded, scale, pad_x, pad_y = letterbox(full_image, self.detector_size)
         padded = self._scale_for_model(padded, self.detector_input_range)
-        _set_input(self.detector, padded)
+        _set_input(self.detector, padded[None, ...])
         self.detector.invoke()
         raw = self.detector.get_tensor(self.det_output_detail["index"])
         raw = _dequantize(raw, self.det_output_detail)
@@ -367,7 +368,7 @@ class FullBoardInspector:
             dtype=np.float32,
         )
         resized = self._scale_for_model(resized, self.classifier_input_range)
-        _set_input(self.classifier, resized)
+        _set_input(self.classifier, resized[None, ...])
         self.classifier.invoke()
         detail = self.classifier.get_output_details()[0]
         probs = _dequantize(self.classifier.get_tensor(detail["index"]), detail).reshape(-1)

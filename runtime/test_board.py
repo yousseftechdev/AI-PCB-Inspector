@@ -15,12 +15,10 @@ from __future__ import annotations
 
 import argparse
 import json
-import shutil
 import sys
 import time
 from pathlib import Path
 
-import numpy as np
 from PIL import Image, ImageDraw
 
 # The runtime module travels inside the bundle. When running straight from the

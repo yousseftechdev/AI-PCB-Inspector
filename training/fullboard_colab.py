@@ -720,7 +720,9 @@ def _tensor_metadata(path: Path) -> dict[str, Any]:
     try:
         from tflite_runtime.interpreter import Interpreter
     except ImportError:
-        from tensorflow.lite import Interpreter
+        import tensorflow.lite as tflite
+
+        Interpreter = getattr(tflite, "Interpreter")
     interpreter = Interpreter(model_path=str(path))
     interpreter.allocate_tensors()
     inp = interpreter.get_input_details()[0]
