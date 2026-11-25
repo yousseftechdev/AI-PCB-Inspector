@@ -70,9 +70,10 @@ more binaries to git.
 1. `drive.mount('/content/drive')`. If the mount fails, stop and tell the user; do not retrain.
 2. Read `agent.md`, this file, and `drive/MyDrive/AI-PCB-Inspector/handoff/HANDOFF.json`.
 3. Read `handoff/REQUESTS.md` (local agent → Colab) and any `handoff/ACK_*.md` receipts.
-4. Get the latest code: `git pull` if a remote exists (this VM currently has **no remote configured**),
-   otherwise copy from Drive `sync/repo/` if the local agent published there. Never overwrite
-   uncommitted local work blindly.
+4. Code sync: `origin` **is** configured (`https://github.com/yousseftechdev/AI-PCB-Inspector.git`).
+   Commit text changes here and **push from Colab** — that transfer is fast on Colab's connection.
+   A plain `git pull` on the local PC still fails on the 1.2 GB parent commit, so also mirror text to
+   Drive `sync/repo/`. Never overwrite uncommitted local work blindly.
 5. Load Kaggle / Roboflow credentials from **Colab Secrets only**. Never print, echo, commit, or paste
    a key into chat or a notebook cell output.
 6. Report to the user in ≤3 lines: latest published run, next planned experiment, and blockers.
@@ -201,8 +202,9 @@ Never open a half-downloaded model "just to test quickly".
 
 ### 6.5 Local → Colab and acknowledgement
 
-- Code/docs: commit + push if a remote exists; otherwise upload the changed text files to
-  `sync/repo/` in Drive. (This VM has no remote, so Drive is currently the reliable path.)
+- Code/docs: commit + push from either side — `origin` is configured and pushes from Colab are fast.
+  Also mirror text to `sync/repo/` in Drive, because the local PC cannot reliably pull the 1.2 GB
+  parent commit.
 - Our-board images: `incoming/<board_id>/` plus a CSV with `board_id, joint_id, label, camera_settings,
   defect_method`. Hold out whole board IDs; a joint from a test board must never appear in training.
 - After receiving a run, the local agent writes `handoff/ACK_<run_id>.md` with the exact sha256
@@ -219,37 +221,53 @@ Never open a half-downloaded model "just to test quickly".
 
 ### 6.7 Known sync incident — 2026-11-25 (read this first on the local PC)
 
-The local agent tried the filtered `git fetch` + merge shown in §6.4's sibling guide and **it failed at
-~70% because the connection dropped**. Do not retry `git pull`, `git fetch`, or a merge locally: the
-local PC cannot receive this repo's git history over the current link. The blocker is the 1.2 GB
-parent commit `720902f` (`data/external/soldef/`), not our small text changes.
+**Correction:** `origin` *is* configured here (earlier note saying otherwise was wrong — a shell
+`&&` chain skipped the check). `git ls-remote origin` works, and pushing from Colab is fast.
 
-**Use the Drive text bundle instead** (`sync/repo/`, ~315 KB, with `MANIFEST.sha256`):
+The local agent tried a filtered `git fetch` followed by a merge and **it failed at ~70% because the
+local connection dropped**. The blocker is the 1.2 GB parent commit `720902f`
+(`data/external/soldef/`), not our small text changes. A merge without sparse-checkout configured
+*first* makes git materialise all those image blobs, which is what dies at 70%.
+
+**Colab side:** commit and `git push origin main` normally. This backs up the text changes and puts
+them on GitHub where the local agent can reach them later.
+
+**Local side — try the correct filtered fetch first** (GitHub supports blob filtering):
 
 ```bash
-# on the local PC, bundle downloaded to a sibling folder (NOT inside the repo)
+cd /path/to/AI-PCB-Inspector
+git status                                   # must be clean
+git config remote.origin.promisor true
+git config remote.origin.partialclonefilter blob:none
+git sparse-checkout init --cone              # BEFORE the merge/fetch of blobs
+git sparse-checkout set src tests docs training hardware results
+git fetch --filter=blob:none origin
+git merge --ff-only origin/main              # or: git rebase origin/main
+```
+
+If that still fails on the connection, fall back to the Drive text bundle (`sync/repo/`,
+~315 KB, with `MANIFEST.sha256`):
+
+```bash
 cd ~/Downloads/repo_bundle && sha256sum -c MANIFEST.sha256
 cd /path/to/AI-PCB-Inspector
-git status                                   # must be clean; stash/commit local work first
+git status
 rsync -a --exclude='MANIFEST.sha256' ~/Downloads/repo_bundle/ ./
 git add -A && git commit -m "Sync text files from Colab bundle (2026-11-25)"
 git log --oneline -3
 ```
 
-If the bundle folder was placed inside the repo root instead, add `repo_bundle/` to `.gitignore`
-before committing so it is never tracked.
-
-**Do not `git push` from the Colab repo.** This VM has no remote configured, and pushing `c413ae1`
-would also require transferring its 1.2 GB parent commit. Colab publishes to Drive only; the local
-agent makes the text-only commit locally. See `handoff/SYNC_INSTRUCTIONS.md` for the full note.
+If the bundle folder sits inside the repo root, add `repo_bundle/` to `.gitignore` before committing.
+Never pull model binaries through git — use `gdown --continue` + `sha256sum -c` from `runs/<run_id>/`.
+See `handoff/SYNC_INSTRUCTIONS.md` for the full note.
 
 ---
 
 ## 7. TBC — questions to resolve with the user / local agent
 
 1. Confirm the true meanings of SolDef `no_good`, `exc_solder`, `spike` before any more training.
-2. Can the local agent share a Drive folder link (or configure a git remote) so both machines can
-   reach the same handoff directory?
+2. Can the local agent share a Drive folder link for the `AI-PCB-Inspector` handoff directory?
+   (The git remote already exists and works; the problem is the local download link.)
 3. Which Pi runtime is chosen: `tflite-runtime` (INT8) or NCNN? This fixes the final export format.
 4. Any scrap/expendable boards available for the held-out board test? One perfboard is not enough.
 5. Roboflow licence and class definitions inside the logged-in account — still unverified.
