@@ -177,6 +177,11 @@ audited artifacts are committed in the repo:
 - Datasets: `data/external/soldef/` (Kaggle SolDef_AI `_annotations.coco.json`, 428 images, 671
   annotations) and `data/external/audit_summary.json` with `data/external/audit_previews/`.
   No Roboflow data was available this run.
+- Note (2026-11-25): the current Kaggle archive actually ships 428 per-image labelme JSONs in
+  `SolDef_AI/Labeled/` (plus the same images under `SolDef_AI/Dataset/CS*/R*/V*/Setup*/`), not a
+  ready-made COCO file. The full-board pipeline converts them once into
+  `data_cache/soldef/_annotations.coco.json` and points each image at its Dataset copy so splits
+  can group by board family. No Roboflow workspace/project is used.
 - Run: `training/runs/option_b_public_pilot/run_20261124_224758/` — `option_b_mobilenetv3_small.pt`,
   `metrics.json`, `split_manifest.csv`, `training_config.json`, `crops/`. Pilot `test_accuracy`
   0.7903 (CPU, 10 epochs); see `metrics.json` for per-class precision/recall and the confusion

@@ -1,5 +1,5 @@
 {
-  "_comment": "Colab-only full-board pipeline. 'reviewed' must be true before a mapping is used with --strict-labels. Set it only after looking at audit/<source>/<class>_contact.jpg.",
+  "_comment": "Colab-only full-board pipeline. 'reviewed' must be true before a mapping is used with --strict-labels. Set it only after looking at audit/<source>/<class>_contact.jpg. Only the Kaggle SolDef source is configured; Roboflow is not used (no workspace/project by user decision).",
   "target_classes": [
     "good",
     "insufficient_solder",
@@ -9,7 +9,8 @@
   "datasets": [
     {
       "name": "soldef",
-      "root": "/content/pcb_inspector_data/soldef",
+      "root": "/content/drive/MyDrive/AI-PCB-Inspector/data_cache/soldef",
+      "annotation_format": "labelme",
       "annotations_glob": "**/_annotations.coco.json",
       "license": "GPL-3.0 (Kaggle API metadata)",
       "license_confirmed": true,
@@ -20,22 +21,6 @@
         "exc_solder": {"label": "other", "reviewed": false, "reason": "Excess solder is NOT a bridge. Kept as 'other' to avoid false bridge calls."},
         "no_good": {"label": "other", "reviewed": true, "reason": "docs/datasets.md: component misplacement, NOT a solder bridge."},
         "spike": {"label": "other", "reviewed": false, "reason": "Solder spike is NOT automatically a bridge; review contact sheet."}
-      }
-    },
-    {
-      "name": "roboflow",
-      "root": "/content/pcb_inspector_data/roboflow",
-      "annotations_glob": "**/_annotations.coco.json",
-      "workspace": "work-6qkmv",
-      "project": "pcb-solder-joint",
-      "version": 1,
-      "license": "CC BY 4.0 (verify in the logged-in project before use)",
-      "license_confirmed": false,
-      "source_url": "https://universe.roboflow.com/work-6qkmv/pcb-solder-joint",
-      "class_map": {
-        "GOOD": {"label": "good", "reviewed": false, "reason": "Verify on contact sheet."},
-        "COLDSOLDER": {"label": "insufficient_solder", "reviewed": false, "reason": "Verify on contact sheet; cold solder != insufficient solder by default."},
-        "STICKSOLDER": {"label": "solder_bridge", "reviewed": false, "reason": "Only map to bridge after visual confirmation of actual pad-to-pad bridging."}
       }
     }
   ],

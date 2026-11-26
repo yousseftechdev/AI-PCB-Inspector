@@ -26,7 +26,8 @@ Git carries text only. Models, crops, raw datasets and logs never go into git.
 Add in the Colab sidebar, never in chat, a notebook output, a Drive text file or git:
 
 - `KAGGLE_USERNAME`, `KAGGLE_KEY` — SolDef_AI download.
-- `ROBOFLOW_API_KEY` — optional; needed only if we use Roboflow as a bridge source.
+- `ROBOFLOW_API_KEY` — not used; there is no Roboflow workspace/project. The pipeline skips
+  Roboflow even if this secret is set (it is kept only for compatibility).
 - `GH_TOKEN` — GitHub PAT with write access to the remote repo. Used only by the push cell.
 
 The notebook injects them into the environment without printing them.
@@ -38,7 +39,8 @@ The notebook injects them into the environment without printing them.
 Open `training/PCB_Inspector_Colab.ipynb` and **Run all**:
 
 1. Mount Drive, install pinned-ish dependencies.
-2. Download/cache data.
+2. Download/cache data. The Kaggle SolDef labelme JSONs are converted once to
+   `data_cache/soldef/_annotations.coco.json`; no Roboflow project is contacted.
 3. Generate audit contact sheets and display them.
 4. **Human step**: review contact sheets, set `reviewed: true` only for defensible mappings in
    `training/configs/fullboard_config.json`.

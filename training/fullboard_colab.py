@@ -103,7 +103,13 @@ def find_coco_files(root: Path) -> list[tuple[Path, dict[str, Any]]]:
     results: list[tuple[Path, dict[str, Any]]] = []
     if not root.exists():
         return results
-    for path in sorted(root.rglob("*.json")):
+    # Read obvious COCO exports first: the Kaggle cache also contains hundreds of
+    # labelme JSONs with megabytes of embedded imageData.
+    paths = sorted(
+        root.rglob("*.json"),
+        key=lambda path: (0 if "coco" in path.name.lower() else 1, str(path)),
+    )
+    for path in paths:
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, UnicodeDecodeError):
@@ -111,6 +117,157 @@ def find_coco_files(root: Path) -> list[tuple[Path, dict[str, Any]]]:
         if all(isinstance(payload.get(key), list) for key in ("images", "annotations", "categories")):
             results.append((path, payload))
     return results
+
+
+def load_labelme_files(root: Path) -> list[tuple[Path, dict[str, Any]]]:
+    """Load per-image labelme/VIA JSON exports (``shapes`` + ``imagePath``)."""
+    results: list[tuple[Path, dict[str, Any]]] = []
+    if not root.exists():
+        return results
+    for path in sorted(root.rglob("*.json")):
+        if "coco" in path.name.lower():
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            continue
+        if isinstance(payload, dict) and isinstance(payload.get("shapes"), list) and payload.get("imagePath"):
+            results.append((path, payload))
+    return results
+
+
+def find_labelme_files(root: Path) -> list[Path]:
+    return [path for path, _ in load_labelme_files(root)]
+
+
+def convert_labelme_to_coco(root: Path) -> Path | None:
+    """Convert SolDef's labelme JSONs into one COCO file at the cache root.
+
+    The Kaggle archive ships 428 per-image labelme JSONs in ``SolDef_AI/Labeled``
+    and the same images under ``SolDef_AI/Dataset/CS*/R*/V*/Setup*/``.  We point
+    each COCO image at the Dataset copy so the board-family split can use the
+    path tokens instead of falling back to the (non-unique) WIN_* basenames.
+    """
+    output = root / "_annotations.coco.json"
+    if output.exists():
+        return output
+    labelme_files = load_labelme_files(root)
+    if not labelme_files:
+        return None
+
+    labels = sorted(
+        {
+            str(shape.get("label", ""))
+            for _, payload in labelme_files
+            for shape in payload["shapes"]
+            if shape.get("label")
+        }
+    )
+    if not labels:
+        raise RuntimeError(f"No labels found in labelme annotations under {root}")
+    category_ids = {name: index + 1 for index, name in enumerate(labels)}
+
+    images: list[dict[str, Any]] = []
+    annotations: list[dict[str, Any]] = []
+    annotation_id = 0
+    for image_id, (json_path, payload) in enumerate(labelme_files, start=1):
+        image_name = Path(str(payload["imagePath"])).name
+        sibling = json_path.parent / image_name
+        candidates = [path for path in root.rglob(image_name) if path.is_file()]
+        dataset_copies = [
+            path for path in candidates if "dataset" in path.relative_to(root).as_posix().lower()
+        ]
+        if len(dataset_copies) == 1:
+            image_path = dataset_copies[0]
+        elif dataset_copies:
+            digest = sha256_file(sibling) if sibling.is_file() else None
+            matches = [path for path in dataset_copies if digest and sha256_file(path) == digest]
+            image_path = matches[0] if len(matches) == 1 else dataset_copies[0]
+        elif sibling.is_file():
+            image_path = sibling
+        elif len(candidates) == 1:
+            image_path = candidates[0]
+        else:
+            print(f"WARN: cannot resolve image {image_name!r} for {json_path.name}; skipped")
+            continue
+
+        width = int(payload.get("imageWidth", 0))
+        height = int(payload.get("imageHeight", 0))
+        if width <= 0 or height <= 0:
+            from PIL import Image
+
+            with Image.open(image_path) as img:
+                width, height = img.size
+        images.append(
+            {
+                "id": image_id,
+                "file_name": image_path.relative_to(root).as_posix(),
+                "width": width,
+                "height": height,
+                "license": 1,
+            }
+        )
+        for shape in payload["shapes"]:
+            points = shape.get("points") or []
+            if len(points) < 2:
+                continue
+            try:
+                xs = [float(point[0]) for point in points]
+                ys = [float(point[1]) for point in points]
+            except (TypeError, ValueError):
+                continue
+            x0, y0 = max(0.0, min(xs)), max(0.0, min(ys))
+            x1, y1 = min(width, max(xs)), min(height, max(ys))
+            if x1 <= x0 or y1 <= y0:
+                continue
+            annotation_id += 1
+            annotations.append(
+                {
+                    "id": annotation_id,
+                    "image_id": image_id,
+                    "category_id": category_ids[str(shape["label"])],
+                    "bbox": [x0, y0, x1 - x0, y1 - y0],
+                    "area": (x1 - x0) * (y1 - y0),
+                    "iscrowd": 0,
+                    "segmentation": [[float(value) for point in points for value in point]],
+                }
+            )
+
+    coco = {
+        "info": {
+            "description": "SolDef_AI labelme annotations converted to COCO by fullboard_colab.py",
+            "converted_at": utc_id(),
+            "source": "https://www.kaggle.com/datasets/mauriziocalabrese/soldef-ai-pcb-dataset-for-defect-detection",
+        },
+        "licenses": [{"id": 1, "name": "GPL-3.0 (Kaggle API metadata)"}],
+        "images": images,
+        "annotations": annotations,
+        "categories": [
+            {"id": category_ids[name], "name": name, "supercategory": "solder_joint"}
+            for name in labels
+        ],
+    }
+    output.write_text(json.dumps(coco, indent=2), encoding="utf-8")
+    print(
+        f"Converted {len(images)} labelme images / {len(annotations)} annotations "
+        f"to {output}"
+    )
+    return output
+
+
+def ensure_annotations(config: dict[str, Any]) -> None:
+    """Make sure every configured dataset has a COCO file to audit/prepare."""
+    for dataset in config["datasets"]:
+        root = Path(dataset["root"])
+        if not root.is_dir():
+            continue
+        if dataset.get("annotation_format") == "labelme":
+            convert_labelme_to_coco(root)  # idempotent; cheap once the COCO file exists
+            continue
+        if find_coco_files(root):
+            continue
+        if find_labelme_files(root):
+            convert_labelme_to_coco(root)
 
 
 def resolve_image(root: Path, file_name: str, annotation_dir: Path | None = None) -> Path:
@@ -191,53 +348,80 @@ def check_label_policy(
 def cmd_download(args: argparse.Namespace) -> None:
     require_drive()
     DATA_CACHE.mkdir(parents=True, exist_ok=True)
+    config = load_config(args.config)
+    datasets = {dataset["name"]: dataset for dataset in config["datasets"]}
 
-    kaggle_user = get_secret("KAGGLE_USERNAME")
-    kaggle_key = get_secret("KAGGLE_KEY")
-    if kaggle_user and kaggle_key:
-        soldef_dir = DATA_CACHE / "soldef"
+    soldef = datasets.get("soldef")
+    if soldef:
+        soldef_dir = Path(soldef["root"])
         soldef_dir.mkdir(parents=True, exist_ok=True)
-        if not find_coco_files(soldef_dir):
+        if find_coco_files(soldef_dir) or find_labelme_files(soldef_dir):
+            print(f"SolDef cached at {soldef_dir}")
+        else:
+            kaggle_user = get_secret("KAGGLE_USERNAME")
+            kaggle_key = get_secret("KAGGLE_KEY")
+            if not (kaggle_user and kaggle_key):
+                raise RuntimeError(
+                    "SolDef is not cached. Add KAGGLE_USERNAME and KAGGLE_KEY to Colab "
+                    "Secrets and rerun download."
+                )
             env = os.environ.copy()
             env["KAGGLE_USERNAME"] = kaggle_user
             env["KAGGLE_KEY"] = kaggle_key
             subprocess.run(
                 ["kaggle", "datasets", "download", "-d",
-                 "mauriziocalabrese/soldef-ai-pcb-dataset-for-defect-detection",
+                 soldef.get("kaggle_slug",
+                            "mauriziocalabrese/soldef-ai-pcb-dataset-for-defect-detection"),
                  "-p", str(soldef_dir), "--unzip"],
                 check=True,
                 env=env,
             )
-        else:
-            print(f"SolDef cached at {soldef_dir}")
+
+    # Roboflow is opt-in: only a dataset with a configured workspace/project is
+    # downloaded, and only when an API key exists. No project is configured for
+    # this project, so the hardcoded workspace/project call is gone.
+    roboflow_datasets = [
+        dataset for dataset in config["datasets"]
+        if dataset.get("workspace") and dataset.get("project")
+    ]
+    if not roboflow_datasets:
+        print("Roboflow: disabled (no workspace/project configured); skipping.")
     else:
-        print("KAGGLE_USERNAME/KAGGLE_KEY not in Colab Secrets; SolDef download skipped.")
+        rf_key = get_secret("ROBOFLOW_API_KEY")
+        if not rf_key:
+            print("ROBOFLOW_API_KEY missing; configured Roboflow dataset(s) skipped.")
+        else:
+            from roboflow import Roboflow
 
-    rf_key = get_secret("ROBOFLOW_API_KEY")
-    if rf_key:
-        from roboflow import Roboflow
-
-        target = DATA_CACHE / "roboflow"
-        if not find_coco_files(target):
             rf = Roboflow(api_key=rf_key)
-            project = rf.workspace("work-6qkmv").project("pcb-solder-joint")
-            project.version(1).download("coco", location=str(target))
-        else:
-            print(f"Roboflow cached at {target}")
-    else:
-        print("ROBOFLOW_API_KEY not in Colab Secrets; Roboflow download skipped.")
+            for dataset in roboflow_datasets:
+                target = Path(dataset["root"])
+                target.mkdir(parents=True, exist_ok=True)
+                if find_coco_files(target):
+                    print(f"Roboflow cached at {target}")
+                    continue
+                project = rf.workspace(dataset["workspace"]).project(dataset["project"])
+                project.version(int(dataset.get("version", 1))).download(
+                    "coco", location=str(target)
+                )
+
+    ensure_annotations(config)
     print(f"Data cache: {DATA_CACHE}")
 
 
 def cmd_audit(args: argparse.Namespace) -> None:
     require_drive()
     config = load_config(args.config)
+    ensure_annotations(config)
     from PIL import Image, ImageDraw
 
+    (RUNS_ROOT / "audit").mkdir(parents=True, exist_ok=True)
     summary: dict[str, Any] = {"generated_at": utc_id(), "sources": {}}
+    total_entries = 0
     for dataset in config["datasets"]:
         root = Path(dataset["root"])
         entries = find_coco_files(root)
+        total_entries += len(entries)
         print(f"\n[{dataset['name']}] {len(entries)} COCO file(s) under {root}")
         source_summary: list[dict[str, Any]] = []
         for annotation_path, coco in entries:
@@ -297,6 +481,11 @@ def cmd_audit(args: argparse.Namespace) -> None:
                 sheet.save(out, quality=90)
                 print(f"  contact sheet: {out}")
         summary["sources"][dataset["name"]] = source_summary
+    if total_entries == 0:
+        raise RuntimeError(
+            "No COCO annotation files found. Run `download` first and check the dataset "
+            "roots in training/configs/fullboard_config.json."
+        )
     summary_path = RUNS_ROOT / "audit" / "audit_summary.json"
     summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
     print(f"\nAudit summary: {summary_path}")
@@ -326,6 +515,7 @@ def _bbox_from_annotation(ann: dict[str, Any], image_size: tuple[int, int]) -> l
 def cmd_prepare(args: argparse.Namespace) -> None:
     require_drive()
     config = load_config(args.config)
+    ensure_annotations(config)
     output = Path(args.output)
     output.mkdir(parents=True, exist_ok=True)
     strict = not args.allow_provisional
@@ -739,6 +929,25 @@ def np_dtype_name(dtype: Any) -> str:
     return getattr(dtype, "__name__", str(dtype))
 
 
+def input_size_from_shape(shape: list[int]) -> int:
+    """Return the spatial size of a square NHWC or NCHW model input."""
+    if len(shape) != 4:
+        raise ValueError(f"Expected a 4-D model input shape, got {shape}")
+    if shape[3] == 3:  # NHWC [1, H, W, 3]
+        return int(shape[1])
+    if shape[1] == 3:  # NCHW [1, 3, H, W]
+        return int(shape[2])
+    raise ValueError(f"Cannot find the 3-channel axis in input shape {shape}")
+
+
+def load_labels(path: Path) -> list[str]:
+    """Read labels.txt into a clean list (it is plain text, not JSON)."""
+    labels = [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    if not labels:
+        raise ValueError(f"{path} contains no labels")
+    return labels
+
+
 def cmd_export(args: argparse.Namespace) -> None:
     require_drive()
     work = Path(args.work)
@@ -755,8 +964,8 @@ def cmd_export(args: argparse.Namespace) -> None:
 
     det_meta = _tensor_metadata(bundle / "detector.tflite")
     cls_meta = _tensor_metadata(bundle / "classifier.tflite")
-    det_h = det_meta["input_shape"][2] if det_meta["input_shape"][3] == 3 else det_meta["input_shape"][1]
-    cls_h = cls_meta["input_shape"][2] if cls_meta["input_shape"][3] == 3 else cls_meta["input_shape"][1]
+    det_h = input_size_from_shape(det_meta["input_shape"])
+    cls_h = input_size_from_shape(cls_meta["input_shape"])
     output_shape = det_meta["output_shape"]
     layout = "auto"
     if len(output_shape) == 3:
@@ -797,7 +1006,7 @@ def cmd_export(args: argparse.Namespace) -> None:
         "created_at": utc_id(),
         "status": "ready_for_local_test",
         "scope": metrics["scope"],
-        "classes": json.loads((bundle / "labels.txt").read_text(encoding="utf-8").splitlines()),
+        "classes": load_labels(bundle / "labels.txt"),
         "label_semantics": metrics["label_warnings"],
         "split_policy": metrics["split_unit"],
         "metrics": metrics,
@@ -861,7 +1070,8 @@ def cmd_publish(args: argparse.Namespace) -> None:
     state["workflow"] = "Colab-only: no local sync and no local training steps."
     state["known_issues"] = [
         "Public-data feasibility only; not the project's held-out-board accuracy.",
-        "solder_bridge is absent unless a reviewed Roboflow STICKSOLDER mapping or physical data exists.",
+        "solder_bridge is absent unless a reviewed bridge source or physical board data exists "
+        "(no Roboflow project is configured).",
     ]
     state["next_action"] = "User tests the full-board bundle locally and reports confusion examples; then collect our-board images."
     HANDOFF_PATH.write_text(json.dumps(state, indent=2), encoding="utf-8")

@@ -41,6 +41,30 @@ def test_bridge_class_can_be_absent_without_a_reviewed_source():
     assert any("No verified solder_bridge source" in warning for warning in warnings)
 
 
+def test_labelme_annotations_convert_to_coco(tmp_path):
+    from PIL import Image
+
+    labeled = tmp_path / "Labeled"
+    labeled.mkdir()
+    Image.new("RGB", (40, 20)).save(labeled / "img.jpg")
+    (labeled / "img.json").write_text(json.dumps({
+        "version": "4.5.7",
+        "imagePath": "img.jpg",
+        "imageWidth": 40,
+        "imageHeight": 20,
+        "shapes": [{
+            "label": "no_good",
+            "shape_type": "polygon",
+            "points": [[5, 5], [25, 5], [25, 15], [5, 15]],
+        }],
+    }))
+    output = pipeline.convert_labelme_to_coco(tmp_path)
+    coco = json.loads(output.read_text())
+    assert len(coco["images"]) == 1
+    assert coco["annotations"][0]["bbox"] == [5.0, 5.0, 20.0, 10.0]
+    assert coco["categories"][0]["name"] == "no_good"
+
+
 def test_decode_yolo_both_layouts():
     # One object: centre (100, 80), size 40x60, confidence 0.9.
     pred_c_first = np.zeros((1, 5, 10), dtype=np.float32)
@@ -86,3 +110,14 @@ def test_notebook_and_config_are_valid_json():
     assert notebook["cells"]
     config = json.loads((REPO / "training" / "configs" / "fullboard_config.json").read_text())
     assert "solder_bridge" in config["target_classes"]
+
+
+def test_labels_txt_is_parsed_as_plain_text(tmp_path):
+    labels_file = tmp_path / "labels.txt"
+    labels_file.write_text("good\ninsufficient_solder\n\nother\n", encoding="utf-8")
+    assert pipeline.load_labels(labels_file) == ["good", "insufficient_solder", "other"]
+
+
+def test_input_size_from_nhwc_and_nchw_shapes():
+    assert pipeline.input_size_from_shape([1, 640, 640, 3]) == 640
+    assert pipeline.input_size_from_shape([1, 3, 128, 128]) == 128
